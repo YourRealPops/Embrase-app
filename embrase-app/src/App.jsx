@@ -6,31 +6,53 @@ function App() {
   const [inputText, setInputText] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const messagesEndRef = useRef(null);
-  
+
   // Auto-scroll to bottom of messages
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
-  
+
+  // Load chat history on component mount
+  useEffect(() => {
+    fetchChatHistory();
+  }, []);
+
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
-  
+
+  const fetchChatHistory = async () => {
+    try {
+      const response = await fetch('http://localhost:5000/history');
+      const data = await response.json();
+
+      // Reconstruct chat message flow: user → bot → user → bot
+      const reconstructedMessages = [];
+      for (let i = 0; i < data.length; i++) {
+        const msg = data[i];
+        reconstructedMessages.push({
+          text: msg.message,
+          isBot: msg.sender === "bot",
+        });
+      }
+
+      setMessages(reconstructedMessages);
+    } catch (error) {
+      console.error('Error loading chat history:', error);
+    }
+  };
+
   const handleSendMessage = async (e) => {
     e.preventDefault();
-    
+
     if (!inputText.trim()) return;
-    
-    // Add user message to chat
+
     const userMessage = { text: inputText, isBot: false };
     setMessages(prev => [...prev, userMessage]);
-    const currentInputText = inputText; // Store the input text before clearing
+    const currentInputText = inputText;
     setInputText('');
-    
-    // Show typing indicator
     setIsTyping(true);
-    
-    //Get response from Flask backend
+
     try {
       const response = await fetch('http://localhost:5000/chat', {
         method: 'POST',
@@ -44,11 +66,9 @@ function App() {
 
       setMessages(prev => [
         ...prev,
-        { text: data.message, isBot: true }
-        
+        { text: data.response, isBot: true }
       ]);
 
-      setIsTyping(false);
     } catch (error) {
       console.error('Error sending message:', error);
       setMessages(prev => [
@@ -58,22 +78,23 @@ function App() {
           isBot: true
         }
       ]);
+    } finally {
       setIsTyping(false);
     }
   };
-  
+
   return (
     <div className="app">
       <header className="app-header">
         <h1>Your Friendly Chatbot</h1>
         <p>A safe space to talk about how you're feeling</p>
       </header>
-      
+
       <div className="chat-container">
         <div className="messages-container">
           {messages.map((message, index) => (
-            <div 
-              key={index} 
+            <div
+              key={index}
               className={`message ${message.isBot ? 'bot-message' : 'user-message'}`}
             >
               <div className="message-bubble">
@@ -92,7 +113,7 @@ function App() {
           )}
           <div ref={messagesEndRef} />
         </div>
-        
+
         <form className="input-area" onSubmit={handleSendMessage}>
           <input
             type="text"
@@ -104,11 +125,11 @@ function App() {
           <button type="submit" className="send-button">Send</button>
         </form>
       </div>
-      
+
       <footer className="app-footer">
         <p>
-          This is not a substitute for professional mental health support. 
-          Call your local emergency number if youre in crisis.
+          This is not a substitute for professional mental health support.
+          Call your local emergency number if you're in crisis.
         </p>
       </footer>
     </div>
