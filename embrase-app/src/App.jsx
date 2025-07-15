@@ -23,7 +23,7 @@ function App() {
 
   const fetchChatHistory = async () => {
     try {
-      const response = await fetch('http://localhost:5000/history');
+      const response = await fetch(' https://embrase-app.onrender.com/history');
       const data = await response.json();
 
       // Reconstruct chat message flow: user → bot → user → bot
